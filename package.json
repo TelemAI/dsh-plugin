@@ -1,6 +1,6 @@
 {
   "name": "@telemai/dsh-plugin",
-  "version": "0.1.0",
+  "version": "0.1.0-rc.1",
   "description": "DeepSeek Harness plugin: telem_search web search and telem_fetch page reads with unified Telem config and trajectory-v5 lineage.",
   "type": "module",
   "license": "Apache-2.0",

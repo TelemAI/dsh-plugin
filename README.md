@@ -18,7 +18,7 @@ dsh plugin --profile web add @telemai/dsh-plugin
 dsh plugin --profile headless add @telemai/dsh-plugin   # if you use the headless profile too
 ```
 
-Or from a packed tarball: `dsh plugin --profile web add ./telemai-dsh-plugin-0.1.0.tgz`.
+Or from a packed tarball: `dsh plugin --profile web add ./telemai-dsh-plugin-0.1.0-rc.1.tgz`.
 
 Verify: `dsh --profile web --dump-config` lists a `telem` row, and the model
 sees `telem_search` / `telem_fetch` in every preset (the tools register
