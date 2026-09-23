@@ -1,0 +1,7 @@
+# Bundle patch consumed by `dsh plugin --profile <name> add @telemai/dsh-plugin`:
+# one host-plane row registering telem_search/telem_fetch globally. Users
+# override the row's config in their profile's own cordis.patch.yml (a patch
+# replaces the WHOLE config value, so restate every key you keep).
+- insert:
+    - id: telem
+      name: '@telemai/dsh-plugin'
