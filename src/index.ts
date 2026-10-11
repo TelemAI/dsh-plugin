@@ -173,6 +173,16 @@ const QUERIES_PARAM =
   "AI models under the EU AI Act in 2026\", \"how the amended EU AI Act timeline " +
   "changed the original dates\"], not [\"EU AI Act GPAI 2026\", \"EU AI Act GPAI " +
   "deadline\"]. Send at most 5 queries in one call; the backend rejects more than 32."
+const PUBLISHED_AFTER_PARAM =
+  "Optional. Only return results published on or after this date or date-time, in ISO 8601 " +
+  "(for example 2026-10-01 or 2026-10-01T09:00:00Z). A value with no time zone is read as UTC. " +
+  "Results with no known publication date are kept. Set it only when the task needs sources " +
+  "from a time period; leave it unset otherwise."
+const PUBLISHED_BEFORE_PARAM =
+  "Optional. Only return results published before this date or date-time, in ISO 8601. A value " +
+  "with no time zone is read as UTC, and a date with no time includes that whole day. Results " +
+  "with no known publication date are kept. Set it only when the task needs sources from a " +
+  "time period; leave it unset otherwise."
 const GOAL_PARAM =
   "A short label naming what THIS search step is for — the current task it serves, " +
   "in a few words, not the user's whole request and not this query's keywords. The " +
@@ -276,6 +286,14 @@ export function apply(ctx: Context, config: Config): void {
           type: "string",
           description: GOAL_PARAM,
         },
+        published_after: {
+          type: "string",
+          description: PUBLISHED_AFTER_PARAM,
+        },
+        published_before: {
+          type: "string",
+          description: PUBLISHED_BEFORE_PARAM,
+        },
       },
       output: {
         schema: SEARCH_VALUE_SCHEMA,
@@ -306,7 +324,14 @@ export function apply(ctx: Context, config: Config): void {
         // takes effect on the next search, with no DSH restart. The block rides
         // only on deviation — absent means server defaults.
         const projectRoot = projectRootOf(exec)
-        const search = buildSearchBlock(resolveSearchOptions(projectRoot))
+        // The model's per-call publication window, trimmed, rides on the configured block.
+        const perCall: Record<string, string> = {}
+        for (const key of ["published_after", "published_before"] as const) {
+          const value = typeof args[key] === "string" ? args[key].trim() : ""
+          if (value) perCall[key] = value
+        }
+        const configured = buildSearchBlock(resolveSearchOptions(projectRoot))
+        const search = Object.keys(perCall).length ? { ...configured, ...perCall } : configured
         if (search) body.search = search
         const wire = await resolveWire(ctx, config, apiKeyRef, projectRoot, exec.signal)
         const interaction = await post("search", wire, body)
