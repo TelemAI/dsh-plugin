@@ -133,6 +133,19 @@ function buildSearchBlock(options: TelemOptions): Record<string, unknown> | null
   return Object.keys(block).length ? block : null
 }
 
+// The fetch `options` block (hosted-fetch-options spec F3): `fetchProviders` /
+// `fetchTier` / `fetchNoCache` become `providers` / `tier` / `no_cache`, in that key
+// order — or null when none resolved. It validates nothing (the router judges names);
+// it lowercases `tier`, and sends `no_cache` as resolved. The same block the vendored
+// readers build, pinned by the shared the shared config contract corpus.
+function buildFetchOptions(options: TelemOptions): Record<string, unknown> | null {
+  const block: Record<string, unknown> = {}
+  if (options.fetchProviders !== undefined) block.providers = [...options.fetchProviders]
+  if (options.fetchTier !== undefined) block.tier = options.fetchTier.toLowerCase()
+  if (options.fetchNoCache !== undefined) block.no_cache = options.fetchNoCache
+  return Object.keys(block).length ? block : null
+}
+
 /** Durable card metadata: the backend session id when there is one. */
 function sessionMeta(sessionId: string | undefined): Record<string, string> {
   return sessionId ? { telem_session_id: sessionId } : {}
@@ -281,6 +294,20 @@ export function apply(ctx: Context, config: Config): void {
     return resolved.values
   }
 
+  // The fetch half of the same ladder, per call: the three fetch keys as the
+  // /v1/fetch body's typed `options` block, or null. Its own resolution, so nothing
+  // the search side refuses can stop a fetch.
+  function resolveFetchOptions(projectRoot: string | undefined): Record<string, unknown> | null {
+    const resolved = resolveHarnessOptions({
+      env: process.env,
+      hostOptions: config,
+      projectRoot,
+      read: readConfigFile,
+    })
+    emitNotices(resolved.notices)
+    return buildFetchOptions(resolved.values)
+  }
+
   ctx.tools.register(
     defineTool({
       name: "telem_search",
@@ -385,9 +412,14 @@ export function apply(ctx: Context, config: Config): void {
           lineageDeps(session),
         )
         // The search config is never attached to a fetch: those knobs select
-        // SEARCH providers, and a `search` block here is rejected.
-        const wire = await resolveWire(ctx, config, apiKeyRef, projectRootOf(exec), exec.signal)
-        const interaction = await post("fetch", wire, { urls, metadata })
+        // SEARCH providers, and a `search` block here is rejected. The fetch keys
+        // of the same config ride as the typed `options` block.
+        const projectRoot = projectRootOf(exec)
+        const body: Record<string, unknown> = { urls, metadata }
+        const fetchOptions = resolveFetchOptions(projectRoot)
+        if (fetchOptions) body.options = fetchOptions
+        const wire = await resolveWire(ctx, config, apiKeyRef, projectRoot, exec.signal)
+        const interaction = await post("fetch", wire, body)
         return trimFetch(interaction)
       },
     }),
