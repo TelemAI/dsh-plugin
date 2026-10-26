@@ -78,6 +78,9 @@ Search options resolve on every call, per key:
 4. `TELEM_*` environment variables (`TELEM_TIER`, `TELEM_FIELDS`,
    `TELEM_PROVIDERS_INCLUDE`, `TELEM_PROVIDERS_EXCLUDE`, `TELEM_FULL_CONTENT`).
 
+`TELEM_TOPIC` and `TELEM_MAX_ROUTING_PROVIDERS` are read from the environment only, as on
+the other plugins. The model can also pass `topic` on a call, which beats `TELEM_TOPIC`.
+
 Keys: `tier`, `fields`, `providersInclude`, `providersExclude`, `fullContent`,
 `providerOverrides` — the same vocabulary as every Telem surface (see the
 config-core schema). Nothing configured means the server's defaults.

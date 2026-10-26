@@ -124,6 +124,12 @@ function buildSearchBlock(options: TelemOptions): Record<string, unknown> | null
   // autoRouting is a config-file key, resolved like every other option (for this one
   // key the env beats the file, which the shared resolver already applied).
   if (options.autoRouting !== undefined) block.auto_routing = options.autoRouting
+  // topic and the count stay env-only: they are not config-file options.
+  const env = process.env
+  const count = env.TELEM_MAX_ROUTING_PROVIDERS
+  if (count !== undefined && /^\s*[+-]?\d+\s*$/.test(count)) block.max_routing_providers = Number(count)
+  const topic = env.TELEM_TOPIC?.trim()
+  if (topic) block.topic = topic
   return Object.keys(block).length ? block : null
 }
 
@@ -173,6 +179,10 @@ const QUERIES_PARAM =
   "AI models under the EU AI Act in 2026\", \"how the amended EU AI Act timeline " +
   "changed the original dates\"], not [\"EU AI Act GPAI 2026\", \"EU AI Act GPAI " +
   "deadline\"]. Send at most 5 queries in one call; the backend rejects more than 32."
+// shared.topic_param of the same artifact, verbatim.
+const TOPIC_PARAM =
+  "Optional. Set it only when the answer must come from one site: linkedin, reddit, or x " +
+  "(twitter is also accepted). Leave it unset otherwise."
 const PUBLISHED_AFTER_PARAM =
   "Optional. Only return results published on or after this date or date-time, in ISO 8601 " +
   "(for example 2026-10-01 or 2026-10-01T09:00:00Z). A value with no time zone is read as UTC. " +
@@ -286,6 +296,10 @@ export function apply(ctx: Context, config: Config): void {
           type: "string",
           description: GOAL_PARAM,
         },
+        topic: {
+          type: "string",
+          description: TOPIC_PARAM,
+        },
         published_after: {
           type: "string",
           description: PUBLISHED_AFTER_PARAM,
@@ -324,9 +338,11 @@ export function apply(ctx: Context, config: Config): void {
         // takes effect on the next search, with no DSH restart. The block rides
         // only on deviation — absent means server defaults.
         const projectRoot = projectRootOf(exec)
-        // The model's per-call publication window, trimmed, rides on the configured block.
+        // The model's per-call topic and publication window, trimmed, ride on the
+        // configured block; the topic beats TELEM_TOPIC. The routing mode is never
+        // taken from the model: it comes from the autoRouting config key.
         const perCall: Record<string, string> = {}
-        for (const key of ["published_after", "published_before"] as const) {
+        for (const key of ["topic", "published_after", "published_before"] as const) {
           const value = typeof args[key] === "string" ? args[key].trim() : ""
           if (value) perCall[key] = value
         }
