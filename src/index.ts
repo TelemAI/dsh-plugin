@@ -282,7 +282,9 @@ export function apply(ctx: Context, config: Config): void {
 
   // Levels, per call and per key: plugin config (this row's `config`, static per
   // fiber) > <cwd>/.telem/telem.json > ~/.telem/telem.json > TELEM_* env. DSH
-  // never had deprecated host files, so there are no legacy levels.
+  // never had deprecated host files, so there are no legacy levels. Throws the
+  // refusal when the config can run no search (exclude empties include): running
+  // without the lists would search the default set.
   function resolveSearchOptions(projectRoot: string | undefined): TelemOptions {
     const resolved = resolveHarnessOptions({
       env: process.env,
@@ -291,6 +293,7 @@ export function apply(ctx: Context, config: Config): void {
       read: readConfigFile,
     })
     emitNotices(resolved.notices)
+    if (resolved.refusal !== undefined) throw new Error(resolved.refusal)
     return resolved.values
   }
 
